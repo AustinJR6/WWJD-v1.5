@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ChatScreen from './screens/ChatScreen';
 import { RevenueCatProvider } from './utils/RevenueCatProvider';
 import { AdsProvider } from './utils/AdsProvider';
+import './utils/firebase';
 
 const Stack = createNativeStackNavigator();
 
