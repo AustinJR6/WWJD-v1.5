@@ -18,3 +18,17 @@ WWJD is a React Native app that simulates a Christ-like chatbot experience. The 
 - `prompts/JesusPrompt.ts` – the system prompt used for Christ-like responses.
 
 Enjoy a gentle conversation inspired by the teachings of Jesus.
+
+## Backend API
+
+This repo also contains a simple Express backend in `backend/` for persisting
+chat history and generating responses through OpenAI. To run it locally:
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+Create a `.env` file based on `.env.example` with your OpenAI key and Firebase
+credentials.
