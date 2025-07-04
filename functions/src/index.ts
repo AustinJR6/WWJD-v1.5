@@ -51,37 +51,43 @@ async function getReply(message: string): Promise<string> {
 }
 
 app.post('/askJesus', async (req: Request, res: Response) => {
-  const { message } = req.body as { message?: string };
-  if (!message) {
-    res.status(400).json({ error: 'Message is required' });
-    return;
-  }
-
-  let uid: string;
   try {
-    uid = await verifyToken(req);
-  } catch (err) {
-    console.error('Authentication error:', err);
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+    console.log('Incoming request to /askJesus');
 
-  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.split('Bearer ')[1];
+    if (!token) {
+      console.warn('Missing token');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('Verifying token');
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+    const message = req.body.message;
+
+    console.log('User ID:', uid);
+    console.log('Message:', message);
+
+    if (!message) {
+      console.warn('Missing message body');
+      return res.status(400).json({ error: 'Message required' });
+    }
+
+    console.log('Calling OpenAI');
     const reply = await getReply(message);
-    const userMessages = admin
-      .firestore()
-      .collection('users')
-      .doc(uid)
-      .collection('messages');
+    console.log('AI Reply:', reply);
 
-    const timestamp = admin.firestore.FieldValue.serverTimestamp();
-    await userMessages.add({ text: message, from: 'user', timestamp });
-    await userMessages.add({ text: reply, from: 'ai', timestamp });
+    console.log('Writing messages to Firestore');
+    const db = admin.firestore();
+    const ref = db.collection('users').doc(uid).collection('messages');
+    await ref.add({ text: message, from: 'user', timestamp: Date.now() });
+    await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
 
-    res.json({ reply });
+    return res.status(200).json({ reply });
   } catch (err) {
-    console.error('askJesus error:', err);
-    res.status(500).json({ error: 'Failed to process message' });
+    console.error('Error in askJesus:', err);
+    return res.status(500).json({ error: 'Something went wrong' });
   }
 });
 
