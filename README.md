@@ -6,8 +6,7 @@ WWJD is a React Native app that simulates a Christ-like chatbot experience. The 
 
 1. Install dependencies with `npm install`.
 2. Create a `.env` file (already included) with your OpenAI and RevenueCat keys.
-3. The app automatically connects to Firebase using anonymous auth for any back-end features.
-4. Run the app with `npm start`.
+3. Run the app with `npm start`.
 
 ## File Structure
 
@@ -30,5 +29,4 @@ npm install
 npm run dev
 ```
 
-Create a `.env` file based on `.env.example` with your OpenAI key and Firebase
-credentials.
+Create a `.env` file based on `.env.example` with your OpenAI key.
