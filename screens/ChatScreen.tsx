@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, SafeAreaView } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  ScrollView,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import InputBar from '../components/InputBar';
@@ -51,17 +58,46 @@ export default function ChatScreen() {
     }
   };
 
+  const scrollViewRef = useRef<ScrollView>(null);
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <FlatList
-        data={messages}
-        renderItem={({ item }) => (
-          <MessageBubble text={item.text} fromUser={item.fromUser} />
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 10 }}
-      />
-      <InputBar onSend={sendMessage} />
-    </SafeAreaView>
+    <KeyboardAvoidingView
+      style={styles.wrapper}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={60}
+    >
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.messages}
+          onContentSizeChange={() =>
+            scrollViewRef.current?.scrollToEnd({ animated: true })
+          }
+        >
+          {messages.map((m) => (
+            <MessageBubble
+              key={m.id}
+              text={m.text}
+              fromUser={m.fromUser}
+            />
+          ))}
+        </ScrollView>
+        <InputBar onSend={sendMessage} />
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#fdfaf6',
+  },
+  container: {
+    flex: 1,
+  },
+  messages: {
+    flexGrow: 1,
+    padding: 10,
+  },
+});
