@@ -18,15 +18,15 @@ const styles = StyleSheet.create({
   bubble: {
     padding: 10,
     marginVertical: 4,
-    borderRadius: 8,
+    borderRadius: 12,
     maxWidth: '80%',
   },
   ai: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#fff9e5',
     alignSelf: 'flex-start',
   },
   user: {
-    backgroundColor: '#cfe9ff',
+    backgroundColor: '#e0f0ff',
     alignSelf: 'flex-end',
   },
   text: {
