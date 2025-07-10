@@ -13,7 +13,7 @@ router.get('/messages', authenticate, async (req: AuthenticatedRequest, res: Res
       .orderBy('createdAt', 'asc')
       .get();
 
-    const messages = snapshot.docs.map(doc => doc.data());
+    const messages = snapshot.docs.map((doc) => doc.data());
     res.json({ messages });
   } catch (err) {
     console.error('messages error:', err);

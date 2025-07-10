@@ -27,11 +27,12 @@ export default function ChatScreen() {
   const { showAd } = useAds();
 
   const registerAnonymousUser = async () => {
+    const androidId = await Application.getAndroidIdAsync();
     const res = await fetch('https://your-api.com/auth/anonymous', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        deviceId: Application.androidId || Device.osInternalBuildId,
+        deviceId: androidId || Device.osInternalBuildId,
       }),
     });
     const data = await res.json();
