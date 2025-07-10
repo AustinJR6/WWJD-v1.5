@@ -58,7 +58,8 @@ app.post('/askJesus', async (req: Request, res: Response) => {
     const token = authHeader.split('Bearer ')[1];
     if (!token) {
       console.warn('Missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     console.log('Verifying token');
@@ -71,7 +72,8 @@ app.post('/askJesus', async (req: Request, res: Response) => {
 
     if (!message) {
       console.warn('Missing message body');
-      return res.status(400).json({ error: 'Message required' });
+      res.status(400).json({ error: 'Message required' });
+      return;
     }
 
     console.log('Calling OpenAI');
@@ -84,10 +86,10 @@ app.post('/askJesus', async (req: Request, res: Response) => {
     await ref.add({ text: message, from: 'user', timestamp: Date.now() });
     await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
 
-    return res.status(200).json({ reply });
+    res.status(200).json({ reply });
   } catch (err) {
     console.error('Error in askJesus:', err);
-    return res.status(500).json({ error: 'Something went wrong' });
+    res.status(500).json({ error: 'Something went wrong' });
   }
 });
 
