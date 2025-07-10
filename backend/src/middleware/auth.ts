@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { auth } from '../utils/firebase';
 
 export interface AuthenticatedRequest extends Request {
+  headers: Request['headers'];
+  body: any;
   userId?: string;
 }
 
