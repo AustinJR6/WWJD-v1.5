@@ -95,4 +95,4 @@ app.post('/askJesus', async (req: Request, res: Response) => {
 
 export const askJesus = functions.https.onRequest(app);
 
-export { geminiReply } from './gemini';
+export { generateResponse } from './gemini';

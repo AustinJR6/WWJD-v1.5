@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.geminiReply = exports.askJesus = void 0;
+exports.generateResponse = exports.askJesus = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
@@ -118,5 +118,5 @@ app.post('/askJesus', async (req, res) => {
 });
 exports.askJesus = functions.https.onRequest(app);
 var gemini_1 = require("./gemini");
-Object.defineProperty(exports, "geminiReply", { enumerable: true, get: function () { return gemini_1.geminiReply; } });
+Object.defineProperty(exports, "generateResponse", { enumerable: true, get: function () { return gemini_1.generateResponse; } });
 //# sourceMappingURL=index.js.map
