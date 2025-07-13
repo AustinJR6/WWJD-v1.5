@@ -41,7 +41,6 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const axios_1 = __importDefault(require("axios"));
 const dotenv = __importStar(require("dotenv"));
 const gemini_1 = require("./gemini");
 Object.defineProperty(exports, "generateGemini", { enumerable: true, get: function () { return gemini_1.generateGemini; } });
@@ -50,63 +49,34 @@ admin.initializeApp();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
-const systemPrompt = "You are responding as Jesus would—calm, loving, and wise. Reference scripture, speak with compassion, and guide users with biblical truths. Do not use slang or modern language. Stay rooted in Christ's teachings without claiming to be God directly.";
 async function getReply(message) {
-    var _a, _b, _c, _d;
-    const apiKey = process.env.OPENAI_API_KEY || ((_a = functions.config().openai) === null || _a === void 0 ? void 0 : _a.key);
-    if (!apiKey)
-        throw new Error('Missing OpenAI API key');
-    const response = await axios_1.default.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-3.5-turbo',
-        messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message },
-        ],
-    }, {
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-        },
-    });
-    const reply = (_d = (_c = (_b = response.data.choices) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.message) === null || _d === void 0 ? void 0 : _d.content;
-    if (!reply)
-        throw new Error('No response from OpenAI');
-    return reply.trim();
+    return (0, gemini_1.generateWithGemini)(message);
 }
 app.post('/askJesus', async (req, res) => {
     try {
-        console.log('Incoming request to /askJesus');
         const authHeader = req.headers.authorization || '';
         const token = authHeader.split('Bearer ')[1];
         if (!token) {
-            console.warn('Missing token');
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-        console.log('Verifying token');
         const decoded = await admin.auth().verifyIdToken(token);
         const uid = decoded.uid;
-        const message = req.body.message;
-        console.log('User ID:', uid);
-        console.log('Message:', message);
+        const { message } = req.body;
         if (!message) {
-            console.warn('Missing message body');
             res.status(400).json({ error: 'Message required' });
             return;
         }
-        console.log('Calling OpenAI');
         const reply = await getReply(message);
-        console.log('AI Reply:', reply);
-        console.log('Writing messages to Firestore');
         const db = admin.firestore();
         const ref = db.collection('users').doc(uid).collection('messages');
         await ref.add({ text: message, from: 'user', timestamp: Date.now() });
         await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
-        res.status(200).json({ reply });
+        res.json({ reply });
     }
     catch (err) {
-        console.error('Error in askJesus:', err);
-        res.status(500).json({ error: 'Something went wrong' });
+        console.error('askJesus error:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 exports.askJesus = functions.https.onRequest(app);

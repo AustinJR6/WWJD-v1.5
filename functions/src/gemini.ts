@@ -5,8 +5,8 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT!;
-const LOCATION = 'us-central1'; // or your preferred region
-const MODEL = 'gemini-1.5-pro-preview-0409';
+const LOCATION = process.env.REGION || 'us-central1';
+const MODEL = process.env.MODEL || 'gemini-1.5-pro-preview-0409';
 
 const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
 
@@ -14,6 +14,13 @@ const generativeModel = new GenerativeModel({
   model: MODEL,
   project: PROJECT_ID,
   location: LOCATION,
+  googleAuth: (vertexAI as any).googleAuth,
+  generationConfig: {
+    temperature: 0.4,
+    topK: 32,
+    topP: 0.95,
+    maxOutputTokens: 2048,
+  },
 });
 
 export async function generateWithGemini(prompt: string): Promise<string> {
