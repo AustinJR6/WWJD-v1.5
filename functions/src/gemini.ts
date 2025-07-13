@@ -1,25 +1,26 @@
+import * as functions from 'firebase-functions';
 import { VertexAI } from '@google-cloud/vertexai';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const PROJECT_ID: string = process.env.PROJECT_ID ?? '';
-const REGION: string = process.env.REGION ?? '';
-const GEMINI_MODEL: string = process.env.GEMINI_MODEL ?? '';
+const REGION = process.env.REGION || 'us-central1';
+const GEMINI_MODEL = process.env.MODEL || 'gemini-pro';
 
-export async function generateResponse(prompt: string): Promise<string> {
-  if (!PROJECT_ID || !REGION || !GEMINI_MODEL) {
-    throw new Error('PROJECT_ID, REGION, and GEMINI_MODEL must be set');
+const vertexAi = new VertexAI({ region: REGION } as any);
+
+export const generateGemini = functions.https.onCall(async (data, context) => {
+  const prompt = data.prompt;
+  if (!prompt) {
+    throw new functions.https.HttpsError('invalid-argument', 'Prompt is required.');
   }
 
-  const vertexAi = new VertexAI({ project: PROJECT_ID, location: REGION });
-  const model = vertexAi.getGenerativeModel({ model: GEMINI_MODEL });
+  const model = (vertexAi as any).getModel
+    ? (vertexAi as any).getModel({ model: GEMINI_MODEL })
+    : (vertexAi as any).getGenerativeModel({ model: GEMINI_MODEL });
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
   });
 
-  const reply = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
-  return reply ?? '';
-}
-
-export default generateResponse;
+  return { text: result?.response?.candidates?.[0]?.content?.parts?.[0]?.text || '' };
+});
