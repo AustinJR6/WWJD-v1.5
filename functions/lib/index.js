@@ -36,28 +36,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateResponse = exports.askJesus = void 0;
+exports.generateGemini = exports.askJesus = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const axios_1 = __importDefault(require("axios"));
 const dotenv = __importStar(require("dotenv"));
+const gemini_1 = require("./gemini");
+Object.defineProperty(exports, "generateGemini", { enumerable: true, get: function () { return gemini_1.generateGemini; } });
 dotenv.config();
 admin.initializeApp();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
 const systemPrompt = "You are responding as Jesus would—calm, loving, and wise. Reference scripture, speak with compassion, and guide users with biblical truths. Do not use slang or modern language. Stay rooted in Christ's teachings without claiming to be God directly.";
-async function verifyToken(req) {
-    const authHeader = req.headers.authorization;
-    if (!(authHeader === null || authHeader === void 0 ? void 0 : authHeader.startsWith('Bearer '))) {
-        throw new Error('Missing or invalid Authorization header');
-    }
-    const idToken = authHeader.split(' ')[1];
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    return decoded.uid;
-}
 async function getReply(message) {
     var _a, _b, _c, _d;
     const apiKey = process.env.OPENAI_API_KEY || ((_a = functions.config().openai) === null || _a === void 0 ? void 0 : _a.key);
@@ -117,6 +110,4 @@ app.post('/askJesus', async (req, res) => {
     }
 });
 exports.askJesus = functions.https.onRequest(app);
-var gemini_1 = require("./gemini");
-Object.defineProperty(exports, "generateResponse", { enumerable: true, get: function () { return gemini_1.generateResponse; } });
 //# sourceMappingURL=index.js.map

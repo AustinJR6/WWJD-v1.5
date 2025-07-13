@@ -1,9 +1,10 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import * as dotenv from 'dotenv';
+import { generateGemini } from './gemini';
 
 dotenv.config();
 
@@ -16,15 +17,6 @@ app.use(express.json());
 const systemPrompt =
   "You are responding as Jesus would—calm, loving, and wise. Reference scripture, speak with compassion, and guide users with biblical truths. Do not use slang or modern language. Stay rooted in Christ's teachings without claiming to be God directly.";
 
-async function verifyToken(req: Request): Promise<string> {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw new Error('Missing or invalid Authorization header');
-  }
-  const idToken = authHeader.split(' ')[1];
-  const decoded = await admin.auth().verifyIdToken(idToken);
-  return decoded.uid;
-}
 
 async function getReply(message: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY || functions.config().openai?.key;
@@ -95,4 +87,4 @@ app.post('/askJesus', async (req: Request, res: Response) => {
 
 export const askJesus = functions.https.onRequest(app);
 
-export { generateResponse } from './gemini';
+export { generateGemini };
