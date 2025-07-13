@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.askJesus = void 0;
+exports.geminiReply = exports.askJesus = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
@@ -81,36 +81,42 @@ async function getReply(message) {
     return reply.trim();
 }
 app.post('/askJesus', async (req, res) => {
-    const { message } = req.body;
-    if (!message) {
-        res.status(400).json({ error: 'Message is required' });
-        return;
-    }
-    let uid;
     try {
-        uid = await verifyToken(req);
-    }
-    catch (err) {
-        console.error('Authentication error:', err);
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
-    try {
+        console.log('Incoming request to /askJesus');
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.split('Bearer ')[1];
+        if (!token) {
+            console.warn('Missing token');
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+        console.log('Verifying token');
+        const decoded = await admin.auth().verifyIdToken(token);
+        const uid = decoded.uid;
+        const message = req.body.message;
+        console.log('User ID:', uid);
+        console.log('Message:', message);
+        if (!message) {
+            console.warn('Missing message body');
+            res.status(400).json({ error: 'Message required' });
+            return;
+        }
+        console.log('Calling OpenAI');
         const reply = await getReply(message);
-        const userMessages = admin
-            .firestore()
-            .collection('users')
-            .doc(uid)
-            .collection('messages');
-        const timestamp = admin.firestore.FieldValue.serverTimestamp();
-        await userMessages.add({ text: message, from: 'user', timestamp });
-        await userMessages.add({ text: reply, from: 'ai', timestamp });
-        res.json({ reply });
+        console.log('AI Reply:', reply);
+        console.log('Writing messages to Firestore');
+        const db = admin.firestore();
+        const ref = db.collection('users').doc(uid).collection('messages');
+        await ref.add({ text: message, from: 'user', timestamp: Date.now() });
+        await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
+        res.status(200).json({ reply });
     }
     catch (err) {
-        console.error('askJesus error:', err);
-        res.status(500).json({ error: 'Failed to process message' });
+        console.error('Error in askJesus:', err);
+        res.status(500).json({ error: 'Something went wrong' });
     }
 });
 exports.askJesus = functions.https.onRequest(app);
+var gemini_1 = require("./gemini");
+Object.defineProperty(exports, "geminiReply", { enumerable: true, get: function () { return gemini_1.geminiReply; } });
 //# sourceMappingURL=index.js.map
