@@ -6,7 +6,12 @@ export const askJesus = async (message: string): Promise<string> => {
 
     console.log('Sending message to API:', message);
 
-    const res = await fetch('https://askjesus-54eeuzmaqe-uc.a.run.app', {
+    const baseUrl = process.env.EXPO_PUBLIC_API_BASE;
+    if (!baseUrl) {
+      throw new Error('API base URL not configured');
+    }
+
+    const res = await fetch(baseUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
