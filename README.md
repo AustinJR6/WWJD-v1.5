@@ -18,15 +18,15 @@ WWJD is a React Native app that simulates a Christ-like chatbot experience. The 
 
 Enjoy a gentle conversation inspired by the teachings of Jesus.
 
-## Backend API
+## Cloud Functions
 
-This repo also contains a simple Express backend in `backend/` for persisting
-chat history and generating responses through OpenAI. To run it locally:
+Server-side logic lives in the `functions/` directory and can be deployed to
+Firebase using:
 
 ```bash
-cd backend
-npm install
-npm run dev
+cd functions
+npm run build
+firebase deploy --only functions
 ```
 
 Create a `.env` file based on `.env.example` with your OpenAI key.

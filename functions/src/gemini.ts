@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions';
-import { VertexAI, GenerativeModel } from '@google-cloud/vertexai';
+import { VertexAI } from '@google-cloud/vertexai';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,11 +10,8 @@ const MODEL = process.env.MODEL || 'gemini-1.5-pro-preview-0409';
 
 const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
 
-const generativeModel = new GenerativeModel({
+const generativeModel = vertexAI.getGenerativeModel({
   model: MODEL,
-  project: PROJECT_ID,
-  location: LOCATION,
-  googleAuth: (vertexAI as any).googleAuth,
   generationConfig: {
     temperature: 0.4,
     topK: 32,
