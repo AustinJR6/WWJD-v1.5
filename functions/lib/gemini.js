@@ -32,49 +32,27 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.geminiReply = void 0;
-const functions = __importStar(require("firebase-functions"));
-const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
+exports.generateResponse = generateResponse;
 const vertexai_1 = require("@google-cloud/vertexai");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-const app = (0, express_1.default)();
-app.use((0, cors_1.default)({ origin: true }));
-app.use(express_1.default.json());
-const vertexAi = new vertexai_1.VertexAI({
-    project: process.env.PROJECT_ID,
-    location: 'us-central1',
-});
-const model = vertexAi.getGenerativeModel({
-    model: 'gemini-1.5-pro',
-    generationConfig: {
-        maxOutputTokens: 500,
-        temperature: 0.7,
-        topP: 0.8,
-    },
-});
-app.post('/gemini', async (req, res) => {
+const PROJECT_ID = (_a = process.env.PROJECT_ID) !== null && _a !== void 0 ? _a : '';
+const REGION = (_b = process.env.REGION) !== null && _b !== void 0 ? _b : '';
+const GEMINI_MODEL = (_c = process.env.GEMINI_MODEL) !== null && _c !== void 0 ? _c : '';
+async function generateResponse(prompt) {
     var _a, _b, _c, _d, _e;
-    const message = req.body.message;
-    if (!message) {
-        return res.status(400).json({ error: 'Message is required' });
+    if (!PROJECT_ID || !REGION || !GEMINI_MODEL) {
+        throw new Error('PROJECT_ID, REGION, and GEMINI_MODEL must be set');
     }
-    try {
-        const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: message }] }],
-        });
-        const reply = ((_e = (_d = (_c = (_b = (_a = result.response.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.text) || 'No response';
-        res.status(200).json({ reply });
-    }
-    catch (error) {
-        console.error('Gemini error:', error);
-        res.status(500).json({ error: 'Failed to generate response' });
-    }
-});
-exports.geminiReply = functions.https.onRequest(app);
+    const vertexAi = new vertexai_1.VertexAI({ project: PROJECT_ID, location: REGION });
+    const model = vertexAi.getGenerativeModel({ model: GEMINI_MODEL });
+    const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+    const reply = (_e = (_d = (_c = (_b = (_a = result.response.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.text;
+    return reply !== null && reply !== void 0 ? reply : '';
+}
+exports.default = generateResponse;
 //# sourceMappingURL=gemini.js.map
