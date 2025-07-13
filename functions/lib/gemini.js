@@ -34,25 +34,42 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateGemini = void 0;
+exports.generateWithGemini = generateWithGemini;
 const functions = __importStar(require("firebase-functions"));
 const vertexai_1 = require("@google-cloud/vertexai");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-const REGION = process.env.REGION || 'us-central1';
-const GEMINI_MODEL = process.env.MODEL || 'gemini-pro';
-const vertexAi = new vertexai_1.VertexAI({ region: REGION });
-exports.generateGemini = functions.https.onCall(async (data, context) => {
-    var _a, _b, _c, _d, _e, _f;
-    const prompt = data.prompt;
-    if (!prompt) {
-        throw new functions.https.HttpsError('invalid-argument', 'Prompt is required.');
-    }
-    const model = vertexAi.getModel
-        ? vertexAi.getModel({ model: GEMINI_MODEL })
-        : vertexAi.getGenerativeModel({ model: GEMINI_MODEL });
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+const PROJECT_ID = process.env.GCLOUD_PROJECT;
+const LOCATION = process.env.REGION || 'us-central1';
+const MODEL = process.env.MODEL || 'gemini-1.5-pro-preview-0409';
+const vertexAI = new vertexai_1.VertexAI({ project: PROJECT_ID, location: LOCATION });
+const generativeModel = new vertexai_1.GenerativeModel({
+    model: MODEL,
+    project: PROJECT_ID,
+    location: LOCATION,
+    googleAuth: vertexAI.googleAuth,
+    generationConfig: {
+        temperature: 0.4,
+        topK: 32,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+    },
+});
+async function generateWithGemini(prompt) {
+    const result = await generativeModel.generateContent({
+        contents: [
+            {
+                role: 'user',
+                parts: [{ text: prompt }],
+            },
+        ],
     });
-    return { text: ((_f = (_e = (_d = (_c = (_b = (_a = result === null || result === void 0 ? void 0 : result.response) === null || _a === void 0 ? void 0 : _a.candidates) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.content) === null || _d === void 0 ? void 0 : _d.parts) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.text) || '' };
+    return result.response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+}
+// Optional callable function for Firebase if you need it
+exports.generateGemini = functions.https.onCall(async (data) => {
+    const prompt = data.prompt || '';
+    const response = await generateWithGemini(prompt);
+    return { result: response };
 });
 //# sourceMappingURL=gemini.js.map
