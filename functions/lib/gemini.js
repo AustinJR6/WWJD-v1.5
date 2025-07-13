@@ -43,11 +43,8 @@ const PROJECT_ID = process.env.GCLOUD_PROJECT;
 const LOCATION = process.env.REGION || 'us-central1';
 const MODEL = process.env.MODEL || 'gemini-1.5-pro-preview-0409';
 const vertexAI = new vertexai_1.VertexAI({ project: PROJECT_ID, location: LOCATION });
-const generativeModel = new vertexai_1.GenerativeModel({
+const generativeModel = vertexAI.getGenerativeModel({
     model: MODEL,
-    project: PROJECT_ID,
-    location: LOCATION,
-    googleAuth: vertexAI.googleAuth,
     generationConfig: {
         temperature: 0.4,
         topK: 32,

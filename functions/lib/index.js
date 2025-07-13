@@ -45,7 +45,10 @@ const dotenv = __importStar(require("dotenv"));
 const gemini_1 = require("./gemini");
 Object.defineProperty(exports, "generateGemini", { enumerable: true, get: function () { return gemini_1.generateGemini; } });
 dotenv.config();
-admin.initializeApp();
+const PROJECT_ID = process.env.GCLOUD_PROJECT;
+admin.initializeApp({
+    projectId: PROJECT_ID,
+});
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());

@@ -7,7 +7,10 @@ import { generateGemini, generateWithGemini } from './gemini'
 
 dotenv.config();
 
-admin.initializeApp();
+const PROJECT_ID = process.env.GCLOUD_PROJECT!;
+admin.initializeApp({
+  projectId: PROJECT_ID,
+});
 
 const app = express();
 app.use(cors({ origin: true }));
