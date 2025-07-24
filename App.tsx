@@ -5,7 +5,11 @@ import ChatScreen from './screens/ChatScreen';
 import { RevenueCatProvider } from './utils/RevenueCatProvider';
 import { AdsProvider } from './utils/AdsProvider';
 
-const Stack = createNativeStackNavigator();
+type RootStackParamList = {
+  Chat: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList, undefined>();
 
 export default function App() {
   return (
