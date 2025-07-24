@@ -36,21 +36,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateGemini = exports.askJesus = void 0;
+exports.generateOpenAI = exports.askJesus = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const dotenv = __importStar(require("dotenv"));
-const gemini_1 = require("./gemini");
-Object.defineProperty(exports, "generateGemini", { enumerable: true, get: function () { return gemini_1.generateGemini; } });
-dotenv.config();
+const openai_1 = require("./openai");
+Object.defineProperty(exports, "generateOpenAI", { enumerable: true, get: function () { return openai_1.generateOpenAI; } });
 admin.initializeApp(); // Let Firebase inject project info
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
 async function getReply(message) {
-    return (0, gemini_1.generateWithGemini)(message);
+    return (0, openai_1.generateWithOpenAI)(message);
 }
 app.post('/askJesus', async (req, res) => {
     try {

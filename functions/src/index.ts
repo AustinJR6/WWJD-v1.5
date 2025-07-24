@@ -2,10 +2,7 @@ import * as functions from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import * as dotenv from 'dotenv';
-import { generateGemini, generateWithGemini } from './gemini';
-
-dotenv.config();
+import { generateOpenAI, generateWithOpenAI } from './openai';
 
 admin.initializeApp(); // Let Firebase inject project info
 
@@ -14,7 +11,7 @@ app.use(cors({ origin: true }));
 app.use(express.json());
 
 async function getReply(message: string): Promise<string> {
-  return generateWithGemini(message);
+  return generateWithOpenAI(message);
 }
 
 app.post('/askJesus', async (req: Request, res: Response) => {
@@ -57,4 +54,4 @@ export const askJesus = functions.https.onRequest(
   app
 );
 
-export { generateGemini };
+export { generateOpenAI };
