@@ -35,11 +35,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateGemini = void 0;
 exports.generateWithGemini = generateWithGemini;
-const functions = __importStar(require("firebase-functions"));
+const https_1 = require("firebase-functions/v2/https");
 const vertexai_1 = require("@google-cloud/vertexai");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-const PROJECT_ID = process.env.GCLOUD_PROJECT;
+const PROJECT_ID = process.env.GCLOUD_PROJECT || process.env.PROJECT_ID || 'your-fallback-project-id';
 const LOCATION = process.env.REGION || 'us-central1';
 const MODEL = process.env.MODEL || 'gemini-1.5-pro-preview-0409';
 const vertexAI = new vertexai_1.VertexAI({ project: PROJECT_ID, location: LOCATION });
@@ -52,21 +52,27 @@ const generativeModel = vertexAI.getGenerativeModel({
         maxOutputTokens: 2048,
     },
 });
+// 🔮 Core generation logic
 async function generateWithGemini(prompt) {
-    const result = await generativeModel.generateContent({
-        contents: [
-            {
-                role: 'user',
-                parts: [{ text: prompt }],
-            },
-        ],
-    });
-    return result.response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    try {
+        const result = await generativeModel.generateContent({
+            contents: [
+                {
+                    role: 'user',
+                    parts: [{ text: prompt }],
+                },
+            ],
+        });
+        return (result.response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '');
+    }
+    catch (err) {
+        console.error('[Gemini] Generation error:', err);
+        return '[Error generating response]';
+    }
 }
-// Optional callable function for Firebase if you need it
-exports.generateGemini = functions.https.onCall(async (data) => {
-    const prompt = data.prompt || '';
-    const response = await generateWithGemini(prompt);
-    return { result: response };
+exports.generateGemini = (0, https_1.onCall)(async (request) => {
+    const prompt = request.data.prompt ?? '';
+    const result = await generateWithGemini(prompt);
+    return { result };
 });
 //# sourceMappingURL=gemini.js.map

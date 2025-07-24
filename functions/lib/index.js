@@ -37,7 +37,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateGemini = exports.askJesus = void 0;
-const functions = __importStar(require("firebase-functions"));
+const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -45,10 +45,7 @@ const dotenv = __importStar(require("dotenv"));
 const gemini_1 = require("./gemini");
 Object.defineProperty(exports, "generateGemini", { enumerable: true, get: function () { return gemini_1.generateGemini; } });
 dotenv.config();
-const PROJECT_ID = process.env.GCLOUD_PROJECT;
-admin.initializeApp({
-    projectId: PROJECT_ID,
-});
+admin.initializeApp(); // Gen 2 handles project ID automatically
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
@@ -82,5 +79,9 @@ app.post('/askJesus', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-exports.askJesus = functions.https.onRequest(app);
+// ✅ Gen 2 export with runtime settings
+exports.askJesus = functions.https.onRequest({
+    memory: '512MiB',
+    timeoutSeconds: 60,
+}, app);
 //# sourceMappingURL=index.js.map
