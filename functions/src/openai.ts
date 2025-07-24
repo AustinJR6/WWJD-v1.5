@@ -1,4 +1,3 @@
-import { onCall } from 'firebase-functions/v2/https';
 import * as functions from 'firebase-functions';
 import OpenAI from 'openai';
 
@@ -20,8 +19,8 @@ export async function generateWithOpenAI(prompt: string): Promise<string> {
 
 type OpenAIInput = { prompt?: string };
 
-export const generateOpenAI = onCall<OpenAIInput>(async (request) => {
-  const prompt = request.data.prompt ?? '';
+export const generateOpenAI = functions.https.onCall(async (data, _context) => {
+  const prompt = (data as OpenAIInput).prompt ?? '';
   const result = await generateWithOpenAI(prompt);
   return { result };
 });

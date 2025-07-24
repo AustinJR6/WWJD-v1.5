@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions/v2';
+import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
@@ -46,12 +46,6 @@ app.post('/askJesus', async (req: Request, res: Response) => {
   }
 });
 
-export const askJesus = functions.https.onRequest(
-  {
-    memory: '512MiB',
-    timeoutSeconds: 60,
-  },
-  app
-);
+export const askJesus = functions.https.onRequest(app);
 
 export { generateOpenAI };
