@@ -2,10 +2,12 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ChatScreen from './screens/ChatScreen';
+import AuthScreen from './screens/AuthScreen';
 import { RevenueCatProvider } from './utils/RevenueCatProvider';
 import { AdsProvider } from './utils/AdsProvider';
 
-type RootStackParamList = {
+export type RootStackParamList = {
+  Auth: undefined;
   Chat: undefined;
 };
 
@@ -17,7 +19,8 @@ export default function App() {
     <RevenueCatProvider>
       <AdsProvider>
         <NavigationContainer>
-          <Stack.Navigator>
+          <Stack.Navigator initialRouteName="Auth">
+            <Stack.Screen name="Auth" component={AuthScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
           </Stack.Navigator>
         </NavigationContainer>
