@@ -14,6 +14,7 @@ import MessageBubble from '../components/MessageBubble';
 import { askJesus } from '../services/openai';
 import { increment } from '../utils/TokenTracker';
 import { useAds } from '../utils/AdsProvider';
+import { useRevenueCat } from '../utils/RevenueCatProvider';
 import { saveAuthToken } from '../utils/getToken';
 
 interface Message {
@@ -25,6 +26,7 @@ interface Message {
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const { showAd } = useAds();
+  const { subscriber } = useRevenueCat();
 
   const registerAnonymousUser = async () => {
     const androidId = Application.getAndroidId();
@@ -49,7 +51,9 @@ export default function ChatScreen() {
     const userMessage: Message = { id: Date.now().toString(), text, fromUser: true };
     setMessages((m) => [...m, userMessage]);
     increment();
-    showAd();
+    if (!subscriber) {
+      showAd();
+    }
     try {
       const reply = await askJesus(text);
       const aiMessage: Message = { id: Date.now().toString() + '-ai', text: reply };
