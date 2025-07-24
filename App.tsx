@@ -9,7 +9,8 @@ type RootStackParamList = {
   Chat: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList, undefined>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
 
 export default function App() {
   return (
