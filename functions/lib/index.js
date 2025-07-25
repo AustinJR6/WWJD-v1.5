@@ -37,12 +37,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateOpenAI = exports.askJesus = void 0;
-const functions = __importStar(require("firebase-functions/v2"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const node_fetch_1 = __importDefault(require("node-fetch"));
 const openai_1 = require("./openai");
 Object.defineProperty(exports, "generateOpenAI", { enumerable: true, get: function () { return openai_1.generateOpenAI; } });
+const FIREBASE_API_KEY = functions.config().firebase?.api_key;
 admin.initializeApp(); // Let Firebase inject project info
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
@@ -50,6 +52,66 @@ app.use(express_1.default.json());
 async function getReply(message) {
     return (0, openai_1.generateWithOpenAI)(message);
 }
+async function signInWithCustomToken(customToken) {
+    if (!FIREBASE_API_KEY) {
+        throw new Error('Firebase API key not configured');
+    }
+    const resp = await (0, node_fetch_1.default)(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${FIREBASE_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+        throw new Error(data.error?.message || 'Authentication failed');
+    }
+    return data.idToken;
+}
+app.post('/signup', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            res.status(400).json({ error: 'Email and password required' });
+            return;
+        }
+        const user = await admin.auth().createUser({ email, password });
+        const customToken = await admin.auth().createCustomToken(user.uid);
+        const idToken = await signInWithCustomToken(customToken);
+        res.json({ token: idToken });
+    }
+    catch (err) {
+        console.error('signup error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+app.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            res.status(400).json({ error: 'Email and password required' });
+            return;
+        }
+        if (!FIREBASE_API_KEY) {
+            res.status(500).json({ error: 'Firebase API key not configured' });
+            return;
+        }
+        const resp = await (0, node_fetch_1.default)(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, returnSecureToken: true }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            res.status(400).json({ error: data.error?.message || 'Login failed' });
+            return;
+        }
+        res.json({ token: data.idToken });
+    }
+    catch (err) {
+        console.error('login error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 app.post('/askJesus', async (req, res) => {
     try {
         const authHeader = req.headers.authorization || '';
@@ -77,8 +139,5 @@ app.post('/askJesus', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-exports.askJesus = functions.https.onRequest({
-    memory: '512MiB',
-    timeoutSeconds: 60,
-}, app);
+exports.askJesus = functions.https.onRequest(app);
 //# sourceMappingURL=index.js.map

@@ -1,22 +1,11 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { saveAuthToken } from '../utils/getToken';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../App';
 
-const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-};
-
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE;
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
@@ -27,7 +16,15 @@ export default function AuthScreen() {
   const handleSignUp = async () => {
     setError('');
     try {
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
+      if (!API_BASE) throw new Error('API base not configured');
+      const res = await fetch(`${API_BASE}/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sign up failed');
+      await saveAuthToken(data.token);
       navigation.replace('Chat');
     } catch (e: any) {
       setError(e.message);
@@ -37,7 +34,15 @@ export default function AuthScreen() {
   const handleSignIn = async () => {
     setError('');
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      if (!API_BASE) throw new Error('API base not configured');
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sign in failed');
+      await saveAuthToken(data.token);
       navigation.replace('Chat');
     } catch (e: any) {
       setError(e.message);
