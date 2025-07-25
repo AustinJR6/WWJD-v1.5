@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateOpenAI = exports.askJesus = void 0;
+exports.generateOpenAI = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
@@ -139,5 +139,9 @@ app.post('/askJesus', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-exports.askJesus = functions.https.onRequest(app);
+// Start the Express server when running on Cloud Run. PORT defaults to 8080.
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+});
 //# sourceMappingURL=index.js.map

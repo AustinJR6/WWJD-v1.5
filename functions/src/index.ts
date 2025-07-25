@@ -116,6 +116,10 @@ app.post('/askJesus', async (req: Request, res: Response) => {
   }
 });
 
-export const askJesus = functions.https.onRequest(app);
+// Start the Express server when running on Cloud Run. PORT defaults to 8080.
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});
 
 export { generateOpenAI };
