@@ -6,13 +6,15 @@ interface Props {
   fromUser?: boolean;
 }
 
-export default function MessageBubble({ text, fromUser }: Props) {
+const MessageBubble: React.FC<Props> = ({ text, fromUser }) => {
   return (
     <View style={[styles.bubble, fromUser ? styles.user : styles.ai]}>
       <Text style={styles.text}>{text}</Text>
     </View>
   );
-}
+};
+
+export default MessageBubble;
 
 const styles = StyleSheet.create({
   bubble: {
