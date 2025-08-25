@@ -12,7 +12,7 @@ export default function App() {
     <RevenueCatProvider>
       <AdsProvider>
         <NavigationContainer>
-          <Stack.Navigator>
+          <Stack.Navigator id={undefined}>
             <Stack.Screen name="Chat" component={ChatScreen} />
           </Stack.Navigator>
         </NavigationContainer>
