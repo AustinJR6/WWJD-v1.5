@@ -22,12 +22,17 @@ interface Message {
   fromUser?: boolean;
 }
 
+interface Props {
+  text: string;
+  fromUser?: boolean;
+}
+
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const { showAd } = useAds();
 
   const registerAnonymousUser = async () => {
-    const androidId = Application.androidId;
+    const androidId = Application.getAndroidId;
     const res = await fetch('https://your-api.com/auth/anonymous', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -77,7 +82,6 @@ export default function ChatScreen() {
         >
           {messages.map((m) => (
             <MessageBubble
-              key={m.id}
               text={m.text}
               fromUser={m.fromUser}
             />
