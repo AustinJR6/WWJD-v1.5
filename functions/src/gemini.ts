@@ -1,4 +1,3 @@
-import * as functions from 'firebase-functions/v2';
 import { onCall } from 'firebase-functions/v2/https';
 import { VertexAI } from '@google-cloud/vertexai';
 import * as dotenv from 'dotenv';

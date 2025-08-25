@@ -1,28 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View,
   ScrollView,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
-import * as Application from 'expo-application';
-import * as Device from 'expo-device';
 import InputBar from '../components/InputBar';
 import MessageBubble from '../components/MessageBubble';
-import { askJesus } from '../services/openai';
+import { askJesus } from '../services/ai';
 import { increment } from '../utils/TokenTracker';
 import { useAds } from '../utils/AdsProvider';
-import { saveAuthToken } from '../utils/getToken';
+import { signInAnon } from '../utils/auth';
 
 interface Message {
   id: string;
-  text: string;
-  fromUser?: boolean;
-}
-
-interface Props {
   text: string;
   fromUser?: boolean;
 }
@@ -31,23 +23,8 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const { showAd } = useAds();
 
-  const registerAnonymousUser = async () => {
-    const androidId = Application.getAndroidId;
-    const res = await fetch('https://your-api.com/auth/anonymous', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deviceId: androidId || Device.osInternalBuildId,
-      }),
-    });
-    const data = await res.json();
-    if (data.token) {
-      await saveAuthToken(data.token);
-    }
-  };
-
   useEffect(() => {
-    registerAnonymousUser();
+    signInAnon();
   }, []);
 
   const sendMessage = async (text: string) => {
@@ -82,6 +59,7 @@ export default function ChatScreen() {
         >
           {messages.map((m) => (
             <MessageBubble
+              key={m.id}
               text={m.text}
               fromUser={m.fromUser}
             />
