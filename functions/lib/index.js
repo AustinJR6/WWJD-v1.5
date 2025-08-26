@@ -36,52 +36,43 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateGemini = exports.askJesus = void 0;
+exports.askJesus = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const dotenv = __importStar(require("dotenv"));
 const gemini_1 = require("./gemini");
-Object.defineProperty(exports, "generateGemini", { enumerable: true, get: function () { return gemini_1.generateGemini; } });
-dotenv.config();
-admin.initializeApp(); // Gen 2 handles project ID automatically
+admin.initializeApp(); // Project/credentials auto in Gen 2
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
-async function getReply(message) {
-    return (0, gemini_1.generateWithGemini)(message);
+// Verify Firebase ID token from Authorization: Bearer <token>
+async function verifyToken(req) {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer '))
+        throw new Error('Missing Authorization header');
+    const idToken = authHeader.split('Bearer ')[1];
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    return decoded.uid;
 }
 app.post('/askJesus', async (req, res) => {
     try {
-        const authHeader = req.headers.authorization || '';
-        const token = authHeader.split('Bearer ')[1];
-        if (!token) {
-            res.status(401).json({ error: 'Unauthorized' });
-            return;
-        }
-        const decoded = await admin.auth().verifyIdToken(token);
-        const uid = decoded.uid;
+        const uid = await verifyToken(req);
         const { message } = req.body;
-        if (!message) {
-            res.status(400).json({ error: 'Message required' });
-            return;
-        }
-        const reply = await getReply(message);
+        if (!message)
+            return res.status(400).json({ error: 'Message required' });
+        const reply = await (0, gemini_1.generateWithGemini)(message);
         const db = admin.firestore();
         const ref = db.collection('users').doc(uid).collection('messages');
         await ref.add({ text: message, from: 'user', timestamp: Date.now() });
         await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
-        res.json({ reply });
+        return res.json({ reply });
     }
     catch (err) {
-        console.error('askJesus error:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        const code = err?.message?.includes('Authorization') ? 401 : 500;
+        return res.status(code).json({ error: err?.message || 'Internal server error' });
     }
 });
-// ✅ Gen 2 export with runtime settings
-exports.askJesus = functions.https.onRequest({
-    memory: '512MiB',
-    timeoutSeconds: 60,
-}, app);
+// Export the Express app as an HTTPS function (Gen 2)
+exports.askJesus = functions.https.onRequest({ memory: '512MiB', timeoutSeconds: 60 }, app);
 //# sourceMappingURL=index.js.map
