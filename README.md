@@ -12,7 +12,7 @@ WWJD is a React Native app that simulates a Christ-like chatbot experience. The 
 
 - `App.tsx` – sets up navigation and wraps the app with the Ads and RevenueCat providers.
 - `components/` – UI pieces like chat bubbles and the input bar.
-- `screens/ChatScreen.tsx` – single chat interface using Vertex AI.
+- `src/screens/ChatScreen.tsx` – single chat interface using Vertex AI.
 - `utils/` – API wrapper, providers, and token tracking helper.
 - `prompts/JesusPrompt.ts` – the system prompt used for Christ-like responses.
 

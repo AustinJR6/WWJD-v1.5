@@ -9,6 +9,7 @@ import {
 import InputBar from '../components/InputBar';
 import MessageBubble from '../components/MessageBubble';
 import { askJesus } from '../services/ai';
+import { ensureAnon } from '../lib/firebase';
 import { increment } from '../utils/TokenTracker';
 import { useAds } from '../utils/AdsProvider';
 import { signInAnon } from '../utils/auth';
@@ -24,7 +25,10 @@ export default function ChatScreen() {
   const { showAd } = useAds();
 
   useEffect(() => {
+    // If you keep your existing device-based registration, keep it;
+    // but authenticate with Firebase anon so we can get an ID token.
     signInAnon();
+    ensureAnon().catch(console.warn);
   }, []);
 
   const sendMessage = async (text: string) => {
