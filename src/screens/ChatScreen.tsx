@@ -6,13 +6,13 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import InputBar from '../components/InputBar';
-import MessageBubble from '../components/MessageBubble';
+import InputBar from '../../components/InputBar';
+import MessageBubble from '../../components/MessageBubble';
 import { askJesus } from '../services/ai';
 import { ensureAnon } from '../lib/firebase';
-import { increment } from '../utils/TokenTracker';
-import { useAds } from '../utils/AdsProvider';
-import { signInAnon } from '../utils/auth';
+import { increment } from '../../utils/TokenTracker';
+import { useAds } from '../../utils/AdsProvider';
+import { signInAnon } from '../../utils/auth';
 
 interface Message {
   id: string;
