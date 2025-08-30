@@ -19,7 +19,8 @@ async function verifyToken(req: Request): Promise<string> {
   return decoded.uid;
 }
 
-app.post('/askJesus', async (req: Request, res: Response) => {
+// Support both hitting root (Cloud Run base) and '/askJesus' (Functions alias)
+app.post(['/', '/askJesus'], async (req: Request, res: Response) => {
   try {
     const uid = await verifyToken(req);
     const { message } = req.body as { message?: string };

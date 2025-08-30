@@ -1,8 +1,9 @@
 import { getIdToken, ensureAnon } from '../lib/firebase';
 
-const REGION = 'us-central1'; // change if you deployed to a different region
-const PROJECT_ID = '<YOUR_FIREBASE_PROJECT_ID>'; // e.g. wwjd-app-188fe
-const API_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/askJesus`;
+// Prefer Cloud Run/Functions base URL from env; fallback to Functions alias
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE;
+const FALLBACK_FN_URL = `https://us-central1-${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
+const API_URL = `${API_BASE || FALLBACK_FN_URL}/askJesus`;
 
 export async function askJesus(message: string): Promise<string> {
   await ensureAnon();
