@@ -9,7 +9,12 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://askjesus-y54eeumzaq-uc.a.run.app",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDHf5SZ4X3XbNcqjFfd1Hrkc-TUbZXME",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "wwjd-app-188fe"
+      }
     },
     "production": {
       "autoIncrement": true

@@ -4,7 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ChatScreen from './src/screens/ChatScreen';
 import { RevenueCatProvider } from './utils/RevenueCatProvider';
-import { AdsProvider } from './utils/AdsProvider';
+import { useEffect } from 'react';
+import { ensureAnon } from './src/lib/anonAuth';
 
 type RootParamList = {
   Chat: undefined;
@@ -13,15 +14,19 @@ type RootParamList = {
 const Stack = createNativeStackNavigator<RootParamList>();
 
 export default function App() {
+  useEffect(() => {
+    ensureAnon().catch((e) => console.warn('ensureAnon failed:', e?.message || e));
+    if (__DEV__) {
+      console.log('ENV firebase project:', process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID);
+    }
+  }, []);
   return (
     <RevenueCatProvider>
-      <AdsProvider>
-        <NavigationContainer>
-          <Stack.Navigator id={undefined}>
-            <Stack.Screen name="Chat" component={ChatScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </AdsProvider>
+      <NavigationContainer>
+        <Stack.Navigator id={undefined}>
+          <Stack.Screen name="Chat" component={ChatScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
     </RevenueCatProvider>
   );
 }
