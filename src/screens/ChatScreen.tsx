@@ -10,6 +10,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { askJesus } from '../services/ai';
 import { ensureAnon } from '../lib/anonAuth';
 // Firebase REST auth initialized at startup
@@ -20,8 +22,18 @@ interface Message {
   fromUser?: boolean;
 }
 
-const BG = '#f9f5e9';
-const ACCENT = '#d9c7a0';
+const colors = {
+  bgTop: '#F8F5EC',
+  bgMid: '#F1E6D0',
+  bgBottom: '#E5D6B6',
+  gold: '#C5A463',
+  goldDeep: '#9E7F3C',
+  halo: 'rgba(255, 235, 180, 0.35)',
+  text: '#2A2A2A',
+  textDim: '#5C5C5C',
+  inputBg: 'rgba(255,255,255,0.85)',
+  border: 'rgba(0,0,0,0.08)'
+};
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -73,61 +85,88 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }}>
-      {/* Header matching background */}
-      <View style={{ backgroundColor: BG, paddingHorizontal: 16, paddingVertical: 12 }}>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: '#6b5d3a' }}>Conversations With Jesus</Text>
+    <View style={{ flex: 1 }}>
+      <LinearGradient colors={[colors.bgTop, colors.bgMid, colors.bgBottom]} style={StyleSheet.absoluteFill} />
+
+      {/* Faint cross silhouette */}
+      <View pointerEvents="none" style={styles.crossWrap}>
+        <View style={styles.crossVertical} />
+        <View style={styles.crossHorizontal} />
       </View>
 
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={(m, i) => String(m.id ?? i)}
-        renderItem={renderItem}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 }}
-        style={{ backgroundColor: BG }}
-      />
-
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View
-          style={{
-            backgroundColor: BG,
-            paddingHorizontal: 12,
-            paddingTop: 8,
-            paddingBottom: Math.max(insets.bottom, 12),
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Share your heart…"
-            placeholderTextColor="#9a8f75"
-            style={{
-              flex: 1,
-              backgroundColor: '#fff',
-              borderRadius: 20,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              elevation: 1,
-            }}
-            multiline
-          />
-          <TouchableOpacity
-            onPress={onSend}
-            style={{ backgroundColor: ACCENT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 18 }}
-          >
-            <Text style={{ fontWeight: '700', color: '#4b3f25' }}>Send</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+        {/* Header with halo */}
+        <View style={styles.headerWrap}>
+          <BlurView intensity={20} style={styles.halo} />
+          <Text style={styles.headerSmall}>Conversations</Text>
+          <Text style={styles.headerLarge}>
+            With <Text style={{ color: colors.goldDeep }}>Jesus</Text>
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+        <FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={(m, i) => String(m.id ?? i)}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 }}
+        />
+
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingTop: 8,
+              paddingBottom: Math.max(insets.bottom, 12),
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <BlurView intensity={20} style={styles.inputBar}>
+              <View style={styles.inputInner}>
+                <TextInput
+                  value={text}
+                  onChangeText={setText}
+                  placeholder="Share your heart…"
+                  placeholderTextColor={colors.textDim}
+                  style={styles.input}
+                  multiline
+                />
+                <TouchableOpacity onPress={onSend} style={styles.sendBtn}>
+                  <Text style={styles.sendIcon}>▷</Text>
+                </TouchableOpacity>
+              </View>
+            </BlurView>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  headerWrap: { alignItems: 'center', paddingTop: 22, paddingBottom: 12 },
+  halo: {
+    position: 'absolute',
+    top: 8,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: colors.halo,
+  },
+  headerSmall: { fontSize: 14, letterSpacing: 1, color: colors.textDim },
+  headerLarge: {
+    marginTop: 4,
+    fontSize: 28,
+    fontWeight: '600',
+    color: colors.text,
+    textShadowColor: 'rgba(0,0,0,0.08)',
+    textShadowRadius: 6,
+  },
+  crossWrap: { position: 'absolute', top: '18%', left: 0, right: 0, alignItems: 'center', opacity: 0.09 },
+  crossVertical: { width: 36, height: '52%', borderRadius: 18, backgroundColor: '#FFFFFF' },
+  crossHorizontal: { position: 'absolute', top: '28%', width: '42%', height: 28, borderRadius: 14, backgroundColor: '#FFFFFF' },
   row: { marginVertical: 6, flexDirection: 'row' },
   rowLeft: { justifyContent: 'flex-start' },
   rowRight: { justifyContent: 'flex-end' },
@@ -145,8 +184,20 @@ const styles = StyleSheet.create({
     elevation: 1,
     backgroundColor: '#ffffff',
   },
-  bubbleJesus: { backgroundColor: 'rgba(255,255,255,0.9)' },
+  bubbleJesus: { backgroundColor: 'rgba(255,255,255,0.65)' },
   bubbleUser: { backgroundColor: '#ffffff' },
   label: { fontSize: 11, color: '#5C5C5C', marginBottom: 6 },
   bubbleText: { fontSize: 16, lineHeight: 22, color: '#2A2A2A' },
+  inputBar: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flex: 1,
+  },
+  inputInner: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingVertical: 8 },
+  input: { flex: 1, minHeight: 42, maxHeight: 120, fontSize: 16, color: colors.text, paddingTop: 8, paddingBottom: 8 },
+  sendBtn: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.gold, marginLeft: 8 },
+  sendIcon: { fontSize: 18, color: '#FFF', fontWeight: '700' },
 });
