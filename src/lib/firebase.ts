@@ -5,12 +5,16 @@ import { firebaseConfig } from '../config/firebaseConfig';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-let auth = getAuth(app);
+// Ensure React Native persistence is set by initializing Auth BEFORE getAuth
+let auth;
 try {
-  // @ts-ignore initializeAuth throws if already initialized
+  // initializeAuth throws if already initialized (e.g., on fast refresh)
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage),
   });
-} catch {}
+} catch (e) {
+  // Fallback to existing instance
+  auth = getAuth(app);
+}
 
 export { app, auth };

@@ -1,14 +1,29 @@
+import 'dotenv/config';
 import * as functions from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { generateWithGemini } from './gemini';
+import { generateWithGemini, resolveModel } from './gemini';
 
 admin.initializeApp(); // Project/credentials auto in Gen 2
 
 const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
+
+// Log resolved model at startup for diagnostics
+// eslint-disable-next-line no-console
+console.log('[startup] Using Gemini model:', resolveModel(process.env.MODEL));
+
+// Simple info endpoint to verify config remotely
+app.get(['/info', '/_info'], (_req: Request, res: Response) => {
+  res.json({
+    modelEnv: process.env.MODEL || null,
+    modelResolved: resolveModel(process.env.MODEL),
+    region: process.env.REGION || 'us-central1',
+    project: process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || process.env.PROJECT_ID || null,
+  });
+});
 
 // Verify Firebase ID token from Authorization: Bearer <token>
 async function verifyToken(req: Request): Promise<string> {
@@ -26,7 +41,9 @@ app.post(['/', '/askJesus'], async (req: Request, res: Response) => {
     const { message } = req.body as { message?: string };
     if (!message) return res.status(400).json({ error: 'Message required' });
 
-    const reply = await generateWithGemini(message);
+    // Allow optional model override via query/body; fallback to env
+    const modelOverride = (req.query.model as string) || (req.body as any)?.model;
+    const reply = await generateWithGemini(message, modelOverride);
 
     const db = admin.firestore();
     const ref = db.collection('users').doc(uid).collection('messages');
