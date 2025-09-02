@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { GoogleAuth } from "google-auth-library";
-import { CONFIG } from "./config";
+import { CONFIG } from "./config.js";
 
 const SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 
@@ -18,7 +18,7 @@ export async function callVertex(prompt: string) {
 
   const body = {
     contents: [{ role: "user", parts: [{ text: prompt }]}],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+    generationConfig: { temperature: 0.7, maxOutputTokens: 768 }
   };
 
   const res = await fetch(url, {
