@@ -1,9 +1,9 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { onSchedule } from "firebase-functions/v2/scheduler"; // if needed later
-import { callVertex, buildVertexUrl } from "./vertex";
-import { CONFIG } from "./config";
 import * as logger from "firebase-functions/logger";
 import fetch from "node-fetch";
+import { callVertex, buildVertexUrl } from "./vertex.js";
+import { CONFIG } from "./config.js";
+import { buildJesusPrompt } from "./prompts/JesusPrompt.js";
 
 // Tiny helper: read runtime service account email from metadata server
 async function getServiceAccountEmail(): Promise<string> {
@@ -40,53 +40,81 @@ async function selfTestOnce() {
 
 let selfTestKicked = false;
 
+// ---- BEGIN robust body normalization ----
+function coerceToString(x: unknown): string {
+  if (x == null) return "";
+  if (typeof x === "string") return x;
+  try { return JSON.stringify(x); } catch { return String(x); }
+}
+
+function extractPrompt(req: any): string {
+  // If body arrived as a raw string but Functions didn't parse it:
+  if (typeof req.body === "string") {
+    const raw = req.body as string;
+    try {
+      req.body = JSON.parse(raw);
+    } catch {
+      // Accept raw payload as the prompt
+      return raw.trim();
+    }
+  }
+
+  // If URL-encoded form was sent:
+  if (req.is?.("application/x-www-form-urlencoded") && typeof req.body === "object" && req.body) {
+    const b = req.body as Record<string, unknown>;
+    const maybe = b.prompt ?? b.text ?? b.message ?? b.content ?? b.q ?? b.query;
+    if (maybe) return coerceToString(maybe).trim();
+  }
+
+  // JSON or already-parsed body:
+  if (req.body && typeof req.body === "object") {
+    const b = req.body as Record<string, unknown>;
+    const maybe = b.prompt ?? b.text ?? b.message ?? b.content ?? b.q ?? b.query;
+    if (maybe) return coerceToString(maybe).trim();
+  }
+
+  // As a last resort, allow query parameters (?prompt=...)
+  const qp = (req.query?.prompt ?? req.query?.q) as unknown;
+  return coerceToString(qp).trim();
+}
+// ---- END robust body normalization ----
+
 export const askJesus = onRequest(
   { region: "us-central1", cors: true, timeoutSeconds: 60, memory: "256MiB" },
   async (req, res) => {
     if (!selfTestKicked) { selfTestKicked = true; selfTestOnce(); }
 
     try {
-      if (req.method !== "POST") { res.status(405).send("Method Not Allowed"); return; }
-      // normalize body if it's a raw string
-      if (typeof req.body === "string") {
-        try {
-          req.body = JSON.parse(req.body);
-        } catch {
-          req.body = { prompt: req.body };
-        }
+      if (req.method !== "POST") {
+        res.status(405).send("Method Not Allowed");
+        return;
       }
 
-      let prompt = "";
-      try {
-        const b = req.body || {};
-        prompt = (
-          b.prompt ??
-          b.text ??
-          b.message ??
-          b.content ??
-          b.q ??
-          b.query ??
-          req.query?.prompt ??
-          req.query?.q ??
-          ""
-        )?.toString()?.trim() || "";
-      } catch (e) {
-        prompt = "";
-      }
+      const contentType = req.get?.("content-type") || "unknown";
+      const promptRaw = extractPrompt(req);
 
-      if (!prompt) {
+      // Diagnostics (no user content):
+      logger.info("askJesus request received", {
+        contentType,
+        hasBody: !!req.body,
+        promptLength: promptRaw?.length || 0,
+        model: CONFIG.MODEL_ID,
+        location: CONFIG.VERTEX_LOCATION,
+        vertexUrl: buildVertexUrl(),
+      });
+
+      const userInput = (promptRaw || "").trim();
+      if (!userInput) {
         res.status(400).json({ error: "Missing prompt" });
         return;
       }
 
-      // assert model + location are what we expect
-      if (!/^gemini-(2(\.5)?)-(flash|flash-lite)/.test(CONFIG.MODEL_ID)) {
-        logger.warn("Unexpected MODEL_ID; overriding to gemini-2.5-flash", { current: CONFIG.MODEL_ID });
-      }
+      // Route through JesusPrompt.ts
+      const jesusInput = buildJesusPrompt(userInput);
 
-      const out = await callVertex(prompt);
+      // Call Vertex
+      const out = await callVertex(jesusInput);
 
-      // normalize response shape
       const text =
         out?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text).filter(Boolean).join("\n")
         ?? out?.output_text
@@ -99,7 +127,7 @@ export const askJesus = onRequest(
         text
       });
     } catch (err: any) {
-      // Return exact upstream error to help debugging
+      // bubble exact upstream error (e.g., Vertex 403/404) to help debugging
       logger.error("askJesus error", { error: String(err) });
       res.status(502).json({ ok: false, error: String(err) });
     }
