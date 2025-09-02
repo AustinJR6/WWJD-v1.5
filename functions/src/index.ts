@@ -47,8 +47,37 @@ export const askJesus = onRequest(
 
     try {
       if (req.method !== "POST") { res.status(405).send("Method Not Allowed"); return; }
-      const prompt = (req.body?.prompt ?? req.body?.text ?? "").toString().trim();
-      if (!prompt) { res.status(400).json({ error: "Missing prompt" }); return; }
+      // normalize body if it's a raw string
+      if (typeof req.body === "string") {
+        try {
+          req.body = JSON.parse(req.body);
+        } catch {
+          req.body = { prompt: req.body };
+        }
+      }
+
+      let prompt = "";
+      try {
+        const b = req.body || {};
+        prompt = (
+          b.prompt ??
+          b.text ??
+          b.message ??
+          b.content ??
+          b.q ??
+          b.query ??
+          req.query?.prompt ??
+          req.query?.q ??
+          ""
+        )?.toString()?.trim() || "";
+      } catch (e) {
+        prompt = "";
+      }
+
+      if (!prompt) {
+        res.status(400).json({ error: "Missing prompt" });
+        return;
+      }
 
       // assert model + location are what we expect
       if (!/^gemini-(2(\.5)?)-(flash|flash-lite)/.test(CONFIG.MODEL_ID)) {
