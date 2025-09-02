@@ -12,8 +12,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { askJesus } from '../services/ai';
 import { ensureAnon } from '../lib/anonAuth';
+import { auth } from '../lib/firebase';
+import { postJSON } from '../lib/http';
 // Firebase REST auth initialized at startup
 
 interface Message {
@@ -35,6 +36,30 @@ const colors = {
   border: 'rgba(0,0,0,0.08)'
 };
 
+const CLOUD_RUN_URL =
+  process.env.EXPO_PUBLIC_CLOUD_RUN_URL ?? 'https://askjesus-y54eeumzaq-uc.a.run.app';
+
+async function sendAskJesus({
+  text,
+  uid,
+  sessionId,
+  model = 'gemini-1.5-pro',
+}: {
+  text: string;
+  uid: string;
+  sessionId?: string;
+  model?: string;
+}): Promise<string> {
+  if (!text || !uid) throw new Error('missing required fields: text, uid');
+  const idToken = await auth.currentUser?.getIdToken();
+  const data = await postJSON(
+    `${CLOUD_RUN_URL}/askJesus`,
+    { text, uid, sessionId, model, clientTs: Date.now() },
+    idToken || undefined,
+  );
+  return data?.text ?? data?.reply ?? '';
+}
+
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
@@ -47,11 +72,16 @@ export default function ChatScreen() {
   const onSend = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      console.warn('No user uid available');
+      return;
+    }
     const userMsg: Message = { id: Date.now().toString(), text: trimmed, fromUser: true };
     setMessages((m) => [...m, userMsg]);
     setText('');
     try {
-      const reply = await askJesus(trimmed);
+      const reply = await sendAskJesus({ text: trimmed, uid });
       const aiMsg: Message = { id: Date.now().toString() + '-ai', text: reply, fromUser: false };
       setMessages((m) => [...m, aiMsg]);
     } catch (e: any) {
