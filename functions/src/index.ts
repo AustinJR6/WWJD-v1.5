@@ -45,10 +45,20 @@ app.post(['/', '/askJesus'], async (req: Request, res: Response) => {
     const modelOverride = (req.query.model as string) || (req.body as any)?.model;
     const reply = await generateWithGemini(message, modelOverride);
 
-    const db = admin.firestore();
-    const ref = db.collection('users').doc(uid).collection('messages');
-    await ref.add({ text: message, from: 'user', timestamp: Date.now() });
-    await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
+    // Best-effort persistence. If Firestore isn't enabled, don't fail the request.
+    try {
+      const db = admin.firestore();
+      const ref = db.collection('users').doc(uid).collection('messages');
+      await ref.add({ text: message, from: 'user', timestamp: Date.now() });
+      await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
+    } catch (persistErr: any) {
+      const msg = String(persistErr?.message || persistErr || '');
+      const code = String(persistErr?.code || '');
+      const isNotFound = /not\s*found|^5\b/i.test(msg) || /not_found/i.test(code);
+      // eslint-disable-next-line no-console
+      console.warn('[persist] Skipping Firestore write:', isNotFound ? 'NOT_FOUND' : msg || code);
+      // swallow persistence errors
+    }
 
     return res.json({ reply });
   } catch (err: any) {
