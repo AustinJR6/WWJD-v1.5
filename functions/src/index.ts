@@ -1,74 +1,90 @@
-import 'dotenv/config';
-import * as functions from 'firebase-functions/v2';
-import * as admin from 'firebase-admin';
-import express, { Request, Response } from 'express';
-import cors from 'cors';
-import { generateWithGemini, resolveModel } from './gemini';
+import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler"; // if needed later
+import { callVertex, buildVertexUrl } from "./vertex";
+import { CONFIG } from "./config";
+import * as logger from "firebase-functions/logger";
+import fetch from "node-fetch";
 
-admin.initializeApp(); // Project/credentials auto in Gen 2
-
-const app = express();
-app.use(cors({ origin: true }));
-app.use(express.json());
-
-// Log resolved model at startup for diagnostics
-// eslint-disable-next-line no-console
-console.log('[startup] Using Gemini model:', resolveModel(process.env.MODEL));
-
-// Simple info endpoints to verify config remotely (support multiple mount paths)
-app.get(['/', '/info', '/_info', '/askJesus', '/askJesus/info', '/askJesus/_info'], (_req: Request, res: Response) => {
-  res.json({
-    modelEnv: process.env.MODEL || null,
-    modelResolved: resolveModel(process.env.MODEL),
-    region: process.env.REGION || 'us-central1',
-    project: process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || process.env.PROJECT_ID || null,
-  });
-});
-
-// Verify Firebase ID token from Authorization: Bearer <token>
-async function verifyToken(req: Request): Promise<string> {
-  const authHeader = req.headers.authorization || '';
-  if (!authHeader.startsWith('Bearer ')) throw new Error('Missing Authorization header');
-  const idToken = authHeader.split('Bearer ')[1];
-  const decoded = await admin.auth().verifyIdToken(idToken);
-  return decoded.uid;
+// Tiny helper: read runtime service account email from metadata server
+async function getServiceAccountEmail(): Promise<string> {
+  try {
+    const res = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email", {
+      headers: { "Metadata-Flavor": "Google" }
+    });
+    if (!res.ok) return `unknown(${res.status})`;
+    return await res.text();
+  } catch {
+    return "unknown";
+  }
 }
 
-// Support both hitting root (Cloud Run base) and '/askJesus' (Functions alias)
-app.post(['/', '/askJesus'], async (req: Request, res: Response) => {
+// Cold-start self test (safe, 1-token-ish)
+async function selfTestOnce() {
+  if (CONFIG.DISABLE_SELF_TEST) return;
   try {
-    const uid = await verifyToken(req);
-    const { message } = req.body as { message?: string };
-    if (!message) return res.status(400).json({ error: 'Message required' });
-
-    // Allow optional model override via query/body; fallback to env
-    const modelOverride = (req.query.model as string) || (req.body as any)?.model;
-    const reply = await generateWithGemini(message, modelOverride);
-
-    // Best-effort persistence. If Firestore isn't enabled, don't fail the request.
-    try {
-      const db = admin.firestore();
-      const ref = db.collection('users').doc(uid).collection('messages');
-      await ref.add({ text: message, from: 'user', timestamp: Date.now() });
-      await ref.add({ text: reply, from: 'ai', timestamp: Date.now() });
-    } catch (persistErr: any) {
-      const msg = String(persistErr?.message || persistErr || '');
-      const code = String(persistErr?.code || '');
-      const isNotFound = /not\s*found|^5\b/i.test(msg) || /not_found/i.test(code);
-      // eslint-disable-next-line no-console
-      console.warn('[persist] Skipping Firestore write:', isNotFound ? 'NOT_FOUND' : msg || code);
-      // swallow persistence errors
-    }
-
-    return res.json({ reply });
-  } catch (err: any) {
-    const code = err?.message?.includes('Authorization') ? 401 : 500;
-    return res.status(code).json({ error: err?.message || 'Internal server error' });
+    const sa = await getServiceAccountEmail();
+    logger.info("askJesus self-test starting", {
+      project: CONFIG.PROJECT_ID,
+      location: CONFIG.VERTEX_LOCATION,
+      model: CONFIG.MODEL_ID,
+      url: buildVertexUrl(),
+      serviceAccount: sa
+    });
+    // ultra-light probe: do not block request path; just attempt once
+    await callVertex("ping");
+    logger.info("askJesus self-test ok");
+  } catch (e: any) {
+    logger.error("askJesus self-test failed", { error: String(e) });
   }
-});
+}
 
-// Export the Express app as an HTTPS function (Gen 2)
-export const askJesus = functions.https.onRequest(
-  { memory: '512MiB', timeoutSeconds: 60 },
-  app
+let selfTestKicked = false;
+
+export const askJesus = onRequest(
+  { region: "us-central1", cors: true, timeoutSeconds: 60, memory: "256MiB" },
+  async (req, res) => {
+    if (!selfTestKicked) { selfTestKicked = true; selfTestOnce(); }
+
+    try {
+      if (req.method !== "POST") { res.status(405).send("Method Not Allowed"); return; }
+      const prompt = (req.body?.prompt ?? req.body?.text ?? "").toString().trim();
+      if (!prompt) { res.status(400).json({ error: "Missing prompt" }); return; }
+
+      // assert model + location are what we expect
+      if (!/^gemini-(2(\.5)?)-(flash|flash-lite)/.test(CONFIG.MODEL_ID)) {
+        logger.warn("Unexpected MODEL_ID; overriding to gemini-2.5-flash", { current: CONFIG.MODEL_ID });
+      }
+
+      const out = await callVertex(prompt);
+
+      // normalize response shape
+      const text =
+        out?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text).filter(Boolean).join("\n")
+        ?? out?.output_text
+        ?? JSON.stringify(out);
+
+      res.status(200).json({
+        ok: true,
+        model: CONFIG.MODEL_ID,
+        location: CONFIG.VERTEX_LOCATION,
+        text
+      });
+    } catch (err: any) {
+      // Return exact upstream error to help debugging
+      logger.error("askJesus error", { error: String(err) });
+      res.status(502).json({ ok: false, error: String(err) });
+    }
+  }
 );
+
+// Optional debug endpoint that never returns secrets
+export const askJesus_info = onRequest({ region: "us-central1", cors: true }, async (_req, res) => {
+  const sa = await getServiceAccountEmail();
+  res.json({
+    project: CONFIG.PROJECT_ID,
+    model: CONFIG.MODEL_ID,
+    location: CONFIG.VERTEX_LOCATION,
+    vertexUrl: buildVertexUrl(),
+    serviceAccount: sa,
+  });
+});
