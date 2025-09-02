@@ -15,8 +15,8 @@ app.use(express.json());
 // eslint-disable-next-line no-console
 console.log('[startup] Using Gemini model:', resolveModel(process.env.MODEL));
 
-// Simple info endpoint to verify config remotely
-app.get(['/info', '/_info'], (_req: Request, res: Response) => {
+// Simple info endpoints to verify config remotely (support multiple mount paths)
+app.get(['/', '/info', '/_info', '/askJesus', '/askJesus/info', '/askJesus/_info'], (_req: Request, res: Response) => {
   res.json({
     modelEnv: process.env.MODEL || null,
     modelResolved: resolveModel(process.env.MODEL),
