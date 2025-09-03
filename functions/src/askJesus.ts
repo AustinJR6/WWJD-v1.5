@@ -1,10 +1,10 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { VertexAI } from "@google-cloud/vertexai";
-import { JESUS_SYSTEM_TEXT } from "./jesusPrompt";
+import { JESUS_SYSTEM_TEXT } from "./jesusPrompt.js";
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT!;
 const LOCATION = process.env.VERTEX_LOCATION || "us-central1";
-const MODEL = process.env.VERTEX_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.VERTEX_MODEL || "gemini-2.0-flash";
 const DEBUG = process.env.DEBUG_ASKJESUS === "1";
 
 const vertex = new VertexAI({ project: PROJECT_ID, location: LOCATION });

@@ -1,1 +1,1 @@
-export { askJesus } from "./askJesus";
+export { askJesus } from "./askJesus.js";
