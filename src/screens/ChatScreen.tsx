@@ -13,9 +13,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { ensureAnon } from '../lib/anonAuth';
-import { auth } from '../lib/firebase';
-import { postJSON } from '../lib/http';
-// Firebase REST auth initialized at startup
 
 interface Message {
   id: string;
@@ -36,29 +33,8 @@ const colors = {
   border: 'rgba(0,0,0,0.08)'
 };
 
-const CLOUD_RUN_URL =
+const API_URL =
   process.env.EXPO_PUBLIC_CLOUD_RUN_URL ?? 'https://askjesus-y54eeumzaq-uc.a.run.app';
-
-async function sendAskJesus({
-  text,
-  uid,
-  sessionId,
-  model = 'gemini-1.5-pro',
-}: {
-  text: string;
-  uid: string;
-  sessionId?: string;
-  model?: string;
-}): Promise<string> {
-  if (!text || !uid) throw new Error('missing required fields: text, uid');
-  const idToken = await auth.currentUser?.getIdToken();
-  const data = await postJSON(
-    `${CLOUD_RUN_URL}/askJesus`,
-    { text, uid, sessionId, model, clientTs: Date.now() },
-    idToken || undefined,
-  );
-  return data?.text ?? data?.reply ?? '';
-}
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -69,26 +45,56 @@ export default function ChatScreen() {
   }, []);
   const listRef = useRef<FlatList<Message>>(null);
 
+  const addMessage = (msg: Message) => setMessages((m) => [...m, msg]);
+
+  const ask = async (userText: string) => {
+    try {
+      const resp = await fetch(`${API_URL}/askJesus`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText }),
+      });
+
+      const data = await resp.json();
+
+      // Primary: use normalized text from the function
+      let assistantText: string | undefined = data?.text;
+
+      // Fallback: if server ever leaks raw Vertex response
+      if (!assistantText && data?.candidates?.[0]?.content?.parts) {
+        assistantText = data.candidates[0].content.parts
+          .map((p: any) => p?.text ?? '')
+          .join('')
+          .trim();
+      }
+
+      if (!assistantText) {
+        assistantText = 'Sorry—I couldn’t generate a reply just now.';
+      }
+
+      addMessage({ id: Date.now().toString() + '-ai', text: assistantText, fromUser: false });
+
+      // Optional: if the model hit MAX_TOKENS, show a gentle continue chip/button
+      if (data?.finishReason === 'MAX_TOKENS') {
+        // showContinueChip(); // implement if desired
+      }
+    } catch (e) {
+      console.warn('ask err', e);
+      addMessage({
+        id: Date.now().toString() + '-err',
+        text: 'I ran into a problem reaching the server. Please try again.',
+        fromUser: false,
+      });
+    }
+  };
+
   const onSend = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-      console.warn('No user uid available');
-      return;
-    }
     const userMsg: Message = { id: Date.now().toString(), text: trimmed, fromUser: true };
-    setMessages((m) => [...m, userMsg]);
+    addMessage(userMsg);
     setText('');
-    try {
-      const reply = await sendAskJesus({ text: trimmed, uid });
-      const aiMsg: Message = { id: Date.now().toString() + '-ai', text: reply, fromUser: false };
-      setMessages((m) => [...m, aiMsg]);
-    } catch (e: any) {
-      const errMsg = typeof e?.message === 'string' ? e.message : 'Error fetching reply.';
-      console.warn('askJesus failed:', e);
-      setMessages((m) => [...m, { id: Date.now().toString() + '-err', text: errMsg }]);
-    }
+    await ask(trimmed);
   };
 
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
