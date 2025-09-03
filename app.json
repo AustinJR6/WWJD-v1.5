@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "wwjd-app-188fe",
-    "slug": "wwjd-app-188fe",
+    "name": "WWJD",
+    "slug": "wwjd",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/wwjdIcon.png",
@@ -13,15 +13,16 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.wwjd"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/wwjdIcon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFA500"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.whippybuckle.wwjdapp188fe",
+      "package": "com.yourcompany.wwjd",
       "softwareKeyboardLayoutMode": "pan"
     },
     "web": {

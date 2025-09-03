@@ -1,4 +1,4 @@
-import { onRequest } from "firebase-functions/v2/https";
+npimport { onRequest } from "firebase-functions/v2/https";
 import { VertexAI } from "@google-cloud/vertexai";
 import { JESUS_SYSTEM_TEXT } from "./jesusPrompt.js";
 

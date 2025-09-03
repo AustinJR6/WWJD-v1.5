@@ -8,10 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { ensureAnon } from '../lib/anonAuth';
 
 interface Message {
@@ -21,16 +21,18 @@ interface Message {
 }
 
 const colors = {
-  bgTop: '#F8F5EC',
-  bgMid: '#F1E6D0',
-  bgBottom: '#E5D6B6',
-  gold: '#C5A463',
-  goldDeep: '#9E7F3C',
-  halo: 'rgba(255, 235, 180, 0.35)',
-  text: '#2A2A2A',
-  textDim: '#5C5C5C',
-  inputBg: 'rgba(255,255,255,0.85)',
-  border: 'rgba(0,0,0,0.08)'
+  bgGradientStart: '#0a192f',
+  bgGradientEnd: '#172a45',
+  header: '#0a192f',
+  title: '#ffaf42', // Light orange
+  userBubble: '#2c3e50',
+  jesusBubble: '#3498db',
+  bubbleText: '#ffffff',
+  inputBg: '#1e3048',
+  inputText: '#ffffff',
+  sendButton: '#ffaf42',
+  sendButtonText: '#0a192f',
+  lightBurst: 'rgba(52, 152, 219, 0.1)',
 };
 
 const API_URL =
@@ -60,13 +62,16 @@ export default function ChatScreen() {
 
       const rawText = await resp.text();
       let data: any = null;
-      try { data = JSON.parse(rawText); } catch { /* keep as text */ }
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        /* keep as text */
+      }
 
       if (!resp.ok) {
         console.log('ASK HTTP ERROR:', resp.status, rawText);
         const errMsg =
-          (data && data.error) ||
-          `Error ${resp.status}: ${rawText?.slice(0, 200)}`;
+          (data && data.error) || `Error ${resp.status}: ${rawText?.slice(0, 200)}`;
         addMessage({
           id: Date.now().toString() + '-err',
           text: errMsg,
@@ -75,10 +80,8 @@ export default function ChatScreen() {
         return;
       }
 
-      // Prefer normalized shape
       let assistantText: string | undefined = data?.text;
 
-      // Fallback: if server ever leaks raw Vertex response
       if (!assistantText && data?.candidates?.[0]?.content?.parts) {
         assistantText = data.candidates[0].content.parts
           .map((p: any) => p?.text ?? '')
@@ -88,11 +91,6 @@ export default function ChatScreen() {
 
       if (!assistantText) assistantText = 'Sorry—I couldn’t generate a reply just now.';
       addMessage({ id: Date.now().toString() + '-ai', text: assistantText, fromUser: false });
-
-      // Optional: if the model hit MAX_TOKENS, show a gentle continue chip/button
-      if (data?.finishReason === 'MAX_TOKENS') {
-        // showContinueChip(); // implement if desired
-      }
     } catch (e: any) {
       console.log('ASK EXCEPTION:', e);
       addMessage({
@@ -112,16 +110,11 @@ export default function ChatScreen() {
     await ask(trimmed);
   };
 
-  const renderItem = ({ item, index }: { item: Message; index: number }) => {
-    const prev = messages[index - 1];
-    const isFirstOfBlock = !prev || !!prev.fromUser !== !!item.fromUser;
+  const renderItem = ({ item }: { item: Message }) => {
     const isJesus = !item.fromUser;
     return (
       <View style={[styles.row, isJesus ? styles.rowLeft : styles.rowRight]}>
         <View style={[styles.bubble, isJesus ? styles.bubbleJesus : styles.bubbleUser]}>
-          {isFirstOfBlock && (
-            <Text style={styles.label}>{isJesus ? 'Jesus' : 'You'}</Text>
-          )}
           <Text style={styles.bubbleText}>{item.text}</Text>
         </View>
       </View>
@@ -129,30 +122,25 @@ export default function ChatScreen() {
   };
 
   useEffect(() => {
-    // Scroll to end on new messages
     listRef.current?.scrollToEnd?.({ animated: true });
   }, [messages.length]);
 
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={{ flex: 1 }}>
-      <LinearGradient colors={[colors.bgTop, colors.bgMid, colors.bgBottom]} style={StyleSheet.absoluteFill} />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient
+        colors={[colors.bgGradientStart, colors.bgGradientEnd]}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.lightBurst1} />
+      <View style={styles.lightBurst2} />
+      <View style={styles.lightBurst3} />
 
-      {/* Faint cross silhouette */}
-      <View pointerEvents="none" style={styles.crossWrap}>
-        <View style={styles.crossVertical} />
-        <View style={styles.crossHorizontal} />
-      </View>
-
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
-        {/* Header with halo */}
-        <View style={styles.headerWrap}>
-          <BlurView intensity={20} style={styles.halo} />
-          <Text style={styles.headerSmall}>Conversations</Text>
-          <Text style={styles.headerLarge}>
-            With <Text style={{ color: colors.goldDeep }}>Jesus</Text>
-          </Text>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>WWJD</Text>
         </View>
 
         <FlatList
@@ -160,35 +148,25 @@ export default function ChatScreen() {
           data={messages}
           keyExtractor={(m, i) => String(m.id ?? i)}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 }}
+          contentContainerStyle={styles.listContent}
         />
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View
-            style={{
-              paddingHorizontal: 12,
-              paddingTop: 8,
-              paddingBottom: Math.max(insets.bottom, 12),
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <BlurView intensity={20} style={styles.inputBar}>
-              <View style={styles.inputInner}>
-                <TextInput
-                  value={text}
-                  onChangeText={setText}
-                  placeholder="Share your heart…"
-                  placeholderTextColor={colors.textDim}
-                  style={styles.input}
-                  multiline
-                />
-                <TouchableOpacity onPress={onSend} style={styles.sendBtn}>
-                  <Text style={styles.sendIcon}>▷</Text>
-                </TouchableOpacity>
-              </View>
-            </BlurView>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
+        >
+          <View style={[styles.inputContainer, { paddingBottom: insets.bottom || 12 }]}>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder="Share your heart…"
+              placeholderTextColor="#9ab"
+              style={styles.input}
+              multiline
+            />
+            <TouchableOpacity onPress={onSend} style={styles.sendBtn}>
+              <Text style={styles.sendIcon}>▲</Text>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -197,58 +175,115 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerWrap: { alignItems: 'center', paddingTop: 22, paddingBottom: 12 },
-  halo: {
-    position: 'absolute',
-    top: 8,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: colors.halo,
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgGradientStart,
   },
-  headerSmall: { fontSize: 14, letterSpacing: 1, color: colors.textDim },
-  headerLarge: {
-    marginTop: 4,
-    fontSize: 28,
-    fontWeight: '600',
-    color: colors.text,
-    textShadowColor: 'rgba(0,0,0,0.08)',
-    textShadowRadius: 6,
-  },
-  crossWrap: { position: 'absolute', top: '18%', left: 0, right: 0, alignItems: 'center', opacity: 0.09 },
-  crossVertical: { width: 36, height: '52%', borderRadius: 18, backgroundColor: '#FFFFFF' },
-  crossHorizontal: { position: 'absolute', top: '28%', width: '42%', height: 28, borderRadius: 14, backgroundColor: '#FFFFFF' },
-  row: { marginVertical: 6, flexDirection: 'row' },
-  rowLeft: { justifyContent: 'flex-start' },
-  rowRight: { justifyContent: 'flex-end' },
-  bubble: {
-    maxWidth: '82%',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-    backgroundColor: '#ffffff',
-  },
-  bubbleJesus: { backgroundColor: 'rgba(255,255,255,0.65)' },
-  bubbleUser: { backgroundColor: '#ffffff' },
-  label: { fontSize: 11, color: '#5C5C5C', marginBottom: 6 },
-  bubbleText: { fontSize: 16, lineHeight: 22, color: '#2A2A2A' },
-  inputBar: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
+  safeArea: {
     flex: 1,
   },
-  inputInner: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingVertical: 8 },
-  input: { flex: 1, minHeight: 42, maxHeight: 120, fontSize: 16, color: colors.text, paddingTop: 8, paddingBottom: 8 },
-  sendBtn: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.gold, marginLeft: 8 },
-  sendIcon: { fontSize: 18, color: '#FFF', fontWeight: '700' },
+  header: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.header,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'serif', // An elegant font
+    color: colors.title,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  row: {
+    marginVertical: 6,
+    flexDirection: 'row',
+  },
+  rowLeft: {
+    justifyContent: 'flex-start',
+  },
+  rowRight: {
+    justifyContent: 'flex-end',
+  },
+  bubble: {
+    maxWidth: '82%',
+    padding: 14,
+    borderRadius: 20,
+  },
+  bubbleJesus: {
+    backgroundColor: colors.jesusBubble,
+    borderBottomLeftRadius: 4,
+  },
+  bubbleUser: {
+    backgroundColor: colors.userBubble,
+    borderBottomRightRadius: 4,
+  },
+  bubbleText: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.bubbleText,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    backgroundColor: colors.inputBg,
+  },
+  input: {
+    flex: 1,
+    minHeight: 42,
+    maxHeight: 120,
+    fontSize: 16,
+    color: colors.inputText,
+    backgroundColor: colors.inputBg,
+    paddingHorizontal: 16,
+    borderRadius: 21,
+  },
+  sendBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.sendButton,
+    marginLeft: 8,
+  },
+  sendIcon: {
+    fontSize: 18,
+    color: colors.sendButtonText,
+    fontWeight: '700',
+    transform: [{ translateY: -1 }],
+  },
+  lightBurst1: {
+    position: 'absolute',
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    top: '10%',
+    left: '-20%',
+    backgroundColor: colors.lightBurst,
+  },
+  lightBurst2: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    top: '50%',
+    right: '-30%',
+    backgroundColor: colors.lightBurst,
+  },
+  lightBurst3: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    bottom: '5%',
+    left: '20%',
+    backgroundColor: colors.lightBurst,
+  },
 });
