@@ -51,13 +51,31 @@ export default function ChatScreen() {
     try {
       const resp = await fetch(`${API_URL}/askJesus`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug': '1',
+        },
         body: JSON.stringify({ message: userText }),
       });
 
-      const data = await resp.json();
+      const rawText = await resp.text();
+      let data: any = null;
+      try { data = JSON.parse(rawText); } catch { /* keep as text */ }
 
-      // Primary: use normalized text from the function
+      if (!resp.ok) {
+        console.log('ASK HTTP ERROR:', resp.status, rawText);
+        const errMsg =
+          (data && data.error) ||
+          `Error ${resp.status}: ${rawText?.slice(0, 200)}`;
+        addMessage({
+          id: Date.now().toString() + '-err',
+          text: errMsg,
+          fromUser: false,
+        });
+        return;
+      }
+
+      // Prefer normalized shape
       let assistantText: string | undefined = data?.text;
 
       // Fallback: if server ever leaks raw Vertex response
@@ -68,21 +86,18 @@ export default function ChatScreen() {
           .trim();
       }
 
-      if (!assistantText) {
-        assistantText = 'Sorry—I couldn’t generate a reply just now.';
-      }
-
+      if (!assistantText) assistantText = 'Sorry—I couldn’t generate a reply just now.';
       addMessage({ id: Date.now().toString() + '-ai', text: assistantText, fromUser: false });
 
       // Optional: if the model hit MAX_TOKENS, show a gentle continue chip/button
       if (data?.finishReason === 'MAX_TOKENS') {
         // showContinueChip(); // implement if desired
       }
-    } catch (e) {
-      console.warn('ask err', e);
+    } catch (e: any) {
+      console.log('ASK EXCEPTION:', e);
       addMessage({
         id: Date.now().toString() + '-err',
-        text: 'I ran into a problem reaching the server. Please try again.',
+        text: `Network error: ${e?.message || e}`,
         fromUser: false,
       });
     }
