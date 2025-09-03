@@ -1,0 +1,11 @@
+[debug] [2025-09-03T01:10:44.758Z] ----------------------------------------------------------------------
+[debug] [2025-09-03T01:10:44.765Z] Command:       C:\nvm4w\nodejs\node.exe C:\nvm4w\nodejs\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions:askJesus
+[debug] [2025-09-03T01:10:44.766Z] CLI Version:   14.9.0
+[debug] [2025-09-03T01:10:44.766Z] Platform:      win32
+[debug] [2025-09-03T01:10:44.767Z] Node Version:  v20.19.1
+[debug] [2025-09-03T01:10:44.767Z] Time:          Tue Sep 02 2025 20:10:44 GMT-0500 (Central Daylight Time)
+[debug] [2025-09-03T01:10:44.768Z] ----------------------------------------------------------------------
+[debug] 
+[error] 
+[error] Error: Invalid project id: WWJD.
+Note: Project id must be all lowercase.
