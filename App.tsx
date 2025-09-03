@@ -24,7 +24,7 @@ export default function App() {
     <RevenueCatProvider>
       <NavigationContainer>
         <Stack.Navigator id={undefined}>
-          <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     </RevenueCatProvider>
